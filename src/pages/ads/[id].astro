@@ -1,0 +1,46 @@
+---
+import { Image, getImage } from 'astro:assets';
+import { render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { publishedAds, adUrl } from '../../lib/ads';
+import { tagKey } from '../../lib/tags';
+import { adTitle, adDescription, adSchema } from '../../lib/seo';
+import { displayDate } from '../../lib/publication-date.mjs';
+
+export async function getStaticPaths() {
+  const ads = await publishedAds();
+  return ads.map((ad, index) => ({ params: { id: ad.id }, props: { ad, index, total: ads.length, previous: ads[index - 1], next: ads[index + 1] } }));
+}
+const { ad, index, total, previous, next } = Astro.props;
+const { Content } = await render(ad);
+const scan = await getImage({ src: ad.data.image, width: 1500, format: 'webp' });
+const schema = adSchema(Astro.site!, ad, { src: scan.src, width: Number(scan.attributes.width), height: Number(scan.attributes.height) });
+---
+<Layout title={adTitle(ad)} description={adDescription(ad)} schema={schema} image={scan.src}>
+  <div class="detail wrap">
+    <nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/">Home</a><span aria-hidden="true"> / </span><span aria-current="page">{ad.data.brand}, {ad.data.year}</span></nav>
+    <div class="detail-top"><a class="text-link" href="/#collection"><span aria-hidden="true">←</span> Back to the collection</a><span class="eyebrow">{String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span></div>
+    <header class="detail-heading"><p class="eyebrow">{ad.data.industry} <span aria-hidden="true">/</span> {ad.data.year}</p><h1>{ad.data.brand}</h1><p class="detail-deck">{ad.data.title}</p>
+      {ad.data.date && <p class="publication-date">Added to the archive: <time datetime={ad.data.date}>{displayDate(ad.data.date)}</time></p>}
+      {ad.data.dateModified && <p class="publication-date">Last updated: <time datetime={ad.data.dateModified}>{displayDate(ad.data.dateModified)}</time></p>}
+    </header>
+    <div class="detail-grid">
+      <figure class="detail-figure">
+        <div class="scan-mount"><Image src={ad.data.image} alt={ad.data.imageAlt} widths={[600, 1000, 1500]} sizes="(max-width: 850px) 92vw, 54vw" width={1500} format="webp" loading="eager" /></div>
+        <figcaption><span>{ad.data.brand} · {ad.data.year}</span></figcaption>
+      </figure>
+      <aside class="entry-notes" aria-label="Advertisement information">
+        <h2>The details</h2>
+        <dl><div><dt>Brand</dt><dd>{ad.data.brand}</dd></div><div><dt>Year</dt><dd>{ad.data.year}</dd></div><div><dt>Industry</dt><dd><a href={`/?industry=${encodeURIComponent(ad.data.industry)}#collection`}>{ad.data.industry} ↗</a></dd></div></dl>
+        {ad.data.tags.length > 0 && <div class="notes-section"><h3>Tags</h3><div class="tags">{ad.data.tags.map(tag => <a href={`/?tag=${encodeURIComponent(tagKey(tag))}#collection`}>{tag}</a>)}</div></div>}
+        <a class="text-link" href="#ad-copy">Read the original copy <span aria-hidden="true">↓</span></a>
+      </aside>
+    </div>
+    {ad.body?.trim() && <section class="commentary"><div><span class="eyebrow">READING BETWEEN THE LINES</span><h2>Commentary</h2></div><div class="prose"><Content /></div></section>}
+    <section id="ad-copy" class="ocr-section"><details><summary><span><span class="eyebrow">FROM THE PRINTED PAGE</span><span class="ocr-title">Original ad copy</span></span><span class="expand-mark" aria-hidden="true">+</span></summary><div class="ocr-content"><p class="ocr-note">OCR transcription from the archived page. Scanning and reading-order errors may remain.</p><p class="transcription">{ad.data.ocr || 'No transcription is available for this advertisement.'}</p></div></details></section>
+    <nav class="entry-pagination" aria-label="Browse advertisements">
+      <div>{previous && <a href={adUrl(previous.id)}><span class="eyebrow">← PREVIOUS AD</span><span>{previous.data.brand} <small>{previous.data.year}</small></span></a>}</div>
+      <div>{next && <a href={adUrl(next.id)}><span class="eyebrow">NEXT AD →</span><span>{next.data.brand} <small>{next.data.year}</small></span></a>}</div>
+    </nav>
+  </div>
+</Layout>

@@ -1,0 +1,25 @@
+{
+  "name": "regarding-ads-starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "astro check && astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "test": "node --max-old-space-size=4096 --test tests/site.test.mjs"
+  },
+  "dependencies": {
+    "astro": "^7.3.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "jsdom": "^27.0.0",
+    "typescript": "^5.9.0",
+    "yaml": "^2.9.0"
+  },
+  "description": "An Astro collection starter based on RegardingAds, with five sample advertisements.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

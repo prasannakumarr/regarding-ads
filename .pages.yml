@@ -1,0 +1,88 @@
+# Optional Pages CMS configuration; repository root is the Astro project.
+media:
+  input: src/assets/ads
+  output: ../../assets/ads
+  extensions: [png, jpg, jpeg, webp]
+content:
+  - name: ads
+    label: Advertisements
+    type: collection
+    path: src/content/ads
+    format: yaml-frontmatter
+    subfolders: false
+    filename:
+      template: "{fields.brand}-{fields.year}-{primary}.md"
+      field: create
+    view:
+      primary: title
+      fields: [brand, year, industry, published]
+      sort: order
+      order: asc
+    fields:
+      - name: sourceUrl
+        label: Original advertisement URL
+        type: string
+      - name: brand
+        label: Brand
+        type: string
+        required: true
+      - name: title
+        label: Short description / headline
+        type: string
+        required: true
+      - name: image
+        label: Advertisement image (web copy)
+        type: image
+        required: true
+      - name: imageAlt
+        label: Image description for accessibility
+        type: string
+        required: true
+      - name: year
+        label: Year
+        type: number
+        required: true
+      - name: date
+        label: Added to the archive
+        description: "Actual first public date, YYYY-MM-DD. Leave unknown legacy dates blank; never use the ad year or rebuild date."
+        type: string
+      - name: dateModified
+        label: Last meaningful update
+        description: "YYYY-MM-DD; requires a publication date. Do not change for routine rebuilds."
+        type: string
+      - name: industry
+        label: Industry
+        type: select
+        required: true
+        options:
+          values: [Automotive, Fashion & Accessories, Consumer Goods, Electronics, Telecommunications, Financial Services, Creative, Energy, Travel]
+      - name: orientation
+        label: Orientation
+        type: select
+        required: true
+        default: Portrait
+        options:
+          values: [Portrait, Landscape]
+      - name: tags
+        label: Tags
+        description: "Use reusable creative ideas, benefits, or techniques (for example Engineering or Visual metaphor). Three tags per ad is a useful starting point."
+        type: string
+        list: true
+      - name: themes
+        label: Themes
+        type: string
+        list: true
+      - name: body
+        label: Commentary
+        type: rich-text
+      - name: ocr
+        label: Original ad copy / OCR
+        type: text
+      - name: order
+        label: Display order (lower numbers first)
+        type: number
+        default: 100
+      - name: published
+        label: Published
+        type: boolean
+        default: false

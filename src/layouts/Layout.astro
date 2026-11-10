@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+import { serializeJsonLd } from '../lib/json-ld.mjs';
+interface Props { title?: string; description?: string; schema: unknown; image?: string; }
+const {
+  title = 're:AD — A collection of advertising worth remembering',
+  description = 'A curated collection of vintage print advertisements. Explore the ideas, words, and design that made advertising an art form.',
+  schema, image,
+} = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f7f5ef" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
+    {image && <meta property="og:image" content={new URL(image, Astro.site)} />}
+    <script is:inline type="application/ld+json" set:html={serializeJsonLd(schema)} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header wrap">
+      <a class="wordmark" href="/" aria-label="re:AD home">re<span>:</span>AD<span class="logo-dot">.</span></a>
+      <span class="header-note">REGARDING ADVERTISEMENTS</span>
+      <nav aria-label="Main navigation">
+        <a href="/#collection">The collection</a>
+        <a href="/#about">About</a>
+      </nav>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site-footer wrap">
+      <a class="wordmark" href="/" aria-label="re:AD home">re<span>:</span>AD<span class="logo-dot">.</span></a>
+      <p>A little archive. A lot to look back on.</p>
+      <span>© {new Date().getFullYear()} RegardingAds</span>
+      <small class="copyright-notice">re:AD does not claim copyright ownership of the advertisements reproduced here. They are presented for historical reference, commentary, and study. Any applicable copyrights remain with their respective owners.</small>
+    </footer>
+  </body>
+</html>

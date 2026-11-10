@@ -1,0 +1,187 @@
+---
+import { Image } from 'astro:assets';
+import Layout from '../layouts/Layout.astro';
+import { publishedAds, decade, adUrl } from '../lib/ads';
+import { tagKey } from '../lib/tags';
+import { homeSchema } from '../lib/seo';
+const ads = await publishedAds();
+const decades = [...new Set(ads.map(ad => decade(ad.data.year)))].sort();
+const tags = [...new Set(ads.flatMap(ad => ad.data.tags))].sort((a, b) => a.localeCompare(b));
+const industries = [...new Set(ads.map(ad => ad.data.industry))].sort();
+---
+<Layout schema={homeSchema(Astro.site!, ads)}>
+  <section class="hero wrap">
+    <div class="eyebrow"><span class="small-star" aria-hidden="true">✳</span> A PERSONAL ARCHIVE OF PRINT ADVERTISING</div>
+    <div class="hero-columns">
+      <h1>Good advertising.<br /><em>Worth another look.</em></h1>
+      <div class="hero-note">
+        <p>Before the scroll, there was the page.</p>
+        <p>A collection of old advertisements and the stories they tell. For the curious, the creative, and anyone who still loves a good headline.</p>
+        <a class="text-link" href="#collection">Explore the collection <span aria-hidden="true">↘</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="collection" class="collection wrap" aria-labelledby="collection-heading">
+    <div class="section-heading">
+      <h2 id="collection-heading" tabindex="-1">The collection <sup>{String(ads.length).padStart(2, '0')}</sup></h2>
+      <span class="eyebrow">OLD PAGES. ENDURING IDEAS.</span>
+    </div>
+    <form id="filters" class="filters" aria-label="Filter the collection" hidden>
+      <div class="filter-field"><label for="decade">Decade</label><select id="decade" name="decade"><option value="">All decades</option>{decades.map(value => <option value={value}>{value}</option>)}</select></div>
+      <div class="filter-field"><label for="industry">Industry</label><select id="industry" name="industry"><option value="">All industries</option>{industries.map(value => <option value={value}>{value}</option>)}</select></div>
+      <div class="filter-field"><label for="tag">Tag</label><select id="tag" name="tag"><option value="">All tags</option>{tags.map(value => <option value={tagKey(value)}>{value}</option>)}</select></div>
+      <button class="reset-button" type="reset">Reset filters <span aria-hidden="true">↺</span></button>
+      <p id="result-count" class="result-count" role="status" aria-live="polite">Showing {ads.length} of {ads.length} ads</p>
+    </form>
+    <noscript><p class="muted">All advertisements are shown. Enable JavaScript to use the dropdown filters.</p></noscript>
+    <div class="collection-grid">
+      {ads.map((ad, index) => (
+        <article class="collection-card" data-decade={decade(ad.data.year)} data-industry={ad.data.industry} data-tags={JSON.stringify(ad.data.tags.map(tagKey))}>
+          <a class="card-image" href={adUrl(ad.id)} aria-label={`View ${ad.data.brand}: ${ad.data.title}`}>
+            <Image src={ad.data.image} alt={ad.data.imageAlt} widths={[360, 600, 900]} sizes="(max-width: 620px) 90vw, (max-width: 1000px) 44vw, 29vw" width={600} format="webp" loading={index === 0 ? 'eager' : 'lazy'} />
+            <span class="image-open" aria-hidden="true">↗</span>
+          </a>
+          <div class="card-meta"><span>{ad.data.industry}</span><span>{ad.data.year}</span></div>
+          <h3><a href={adUrl(ad.id)}>{ad.data.brand}</a></h3>
+          <p class="card-title">{ad.data.title}</p>
+          <a class="card-read" href={adUrl(ad.id)}>Take a closer look <span aria-hidden="true">↗</span><span class="sr-only"> at {ad.data.brand}</span></a>
+        </article>
+      ))}
+    </div>
+    <div id="empty-state" class="empty-state" hidden><h3>No ads in this corner of the archive. Yet.</h3><p>Try another decade, industry, or tag, or reset the filters to see everything.</p><button id="clear-empty" class="text-link">Show all ads <span aria-hidden="true">↗</span></button></div>
+    <nav id="collection-pagination" class="collection-pagination" aria-label="Collection pages" hidden></nav>
+    <div class="collection-end"><span></span><p>A growing collection, one page at a time.</p><span></span></div>
+  </section>
+
+  <section id="about" class="about wrap" aria-labelledby="about-heading">
+    <div><span class="eyebrow">A NOTE FROM THE COLLECTOR</span><h2 id="about-heading">Why keep<br /><em>old advertisements?</em></h2><span class="about-star" aria-hidden="true">✳</span></div>
+    <div class="about-copy">
+      <p class="lead">They’re more than marketing artifacts.<br />They’re cultural time capsules.</p>
+      <p>Old advertisements—from 30, 40, even 50 years ago—offer a small but vivid window into the world as it once was: how people lived, what they desired, what they valued, and how businesses spoke to them.</p>
+      <p>As marketers and designers, we can learn a great deal from these vintage ads. The craft of storytelling within a single frame, the play of typography, the rhythm of long copy, and the quiet confidence of a well-written tagline.</p>
+      <p>These ads remind us that creativity once had patience. This curated collection is my way of preserving that legacy—a library of inspiration, and a place to rediscover what made advertising an art form in the first place.</p>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { tagKey } from '../lib/tags';
+  const form = document.querySelector<HTMLFormElement>('#filters')!;
+  const decadeSelect = document.querySelector<HTMLSelectElement>('#decade')!;
+  const industrySelect = document.querySelector<HTMLSelectElement>('#industry')!;
+  const tagSelect = document.querySelector<HTMLSelectElement>('#tag')!;
+  const cards = [...document.querySelectorAll<HTMLElement>('.collection-card')];
+  const count = document.querySelector<HTMLElement>('#result-count')!;
+  const empty = document.querySelector<HTMLElement>('#empty-state')!;
+  const reset = form.querySelector<HTMLButtonElement>('[type="reset"]')!;
+
+  const pagination = document.querySelector<HTMLElement>('#collection-pagination')!;
+  const pageSize = 12;
+  let page = 1;
+
+  function pageUrl(value: number) {
+    const url = new URL(location.href);
+    for (const select of [decadeSelect, industrySelect, tagSelect]) {
+      if (select.value) url.searchParams.set(select.name, select.value);
+      else url.searchParams.delete(select.name);
+    }
+    if (value > 1) url.searchParams.set('page', String(value));
+    else url.searchParams.delete('page');
+    url.hash = 'collection';
+    return url;
+  }
+
+  function applyFilters(updateUrl = true) {
+    const matches = cards.filter(card =>
+      (!decadeSelect.value || card.dataset.decade === decadeSelect.value) &&
+      (!industrySelect.value || card.dataset.industry === industrySelect.value) &&
+      (!tagSelect.value || JSON.parse(card.dataset.tags || '[]').includes(tagSelect.value)));
+    const totalPages = Math.max(1, Math.ceil(matches.length / pageSize));
+    page = Math.min(Math.max(1, page), totalPages);
+    const start = (page - 1) * pageSize;
+    const shown = new Set(matches.slice(start, start + pageSize));
+    for (const card of cards) card.hidden = !shown.has(card);
+    count.textContent = matches.length
+      ? `Showing ${start + 1}–${Math.min(start + pageSize, matches.length)} of ${matches.length} ads`
+      : 'Showing 0 ads';
+    empty.hidden = matches.length !== 0;
+    reset.disabled = !decadeSelect.value && !industrySelect.value && !tagSelect.value;
+    pagination.replaceChildren();
+    pagination.hidden = totalPages <= 1;
+    const summary = document.createElement('p');
+    summary.className = 'pagination-summary';
+    summary.textContent = `Page ${page} of ${totalPages}`;
+    pagination.append(summary);
+    function addPage(label: string, value: number, kind = 'number') {
+      const available = value >= 1 && value <= totalPages;
+      const link = document.createElement(available ? 'a' : 'span');
+      link.textContent = label;
+      link.className = `pagination-${kind}`;
+      if (link instanceof HTMLAnchorElement) {
+        link.href = pageUrl(value).href;
+        link.dataset.page = String(value);
+        link.setAttribute('aria-label', kind === 'number' ? `Page ${value}` : `${kind === 'previous' ? 'Previous' : 'Next'} page`);
+        if (kind !== 'number') link.rel = kind === 'previous' ? 'prev' : 'next';
+        if (kind === 'number' && value === page) link.setAttribute('aria-current', 'page');
+      } else {
+        link.classList.add('pagination-unavailable');
+        link.setAttribute('aria-hidden', 'true');
+      }
+      pagination.append(link);
+    }
+    addPage('← Previous', page - 1, 'previous');
+    // Always expose both ends and the current neighbourhood; never grow the control row.
+    const visiblePages = new Set([1, totalPages]);
+    const startPage = totalPages <= 7 ? 1 : page <= 4 ? 1 : page >= totalPages - 3 ? totalPages - 4 : page - 1;
+    const endPage = totalPages <= 7 ? totalPages : page <= 4 ? 5 : page >= totalPages - 3 ? totalPages : page + 1;
+    for (let value = startPage; value <= endPage; value++) visiblePages.add(value);
+    let previous = 0;
+    for (const value of [...visiblePages].sort((a, b) => a - b)) {
+      if (previous && value - previous > 1) {
+        const gap = document.createElement('span');
+        gap.className = 'pagination-ellipsis';
+        gap.textContent = '…';
+        gap.setAttribute('aria-hidden', 'true');
+        pagination.append(gap);
+      }
+      addPage(String(value), value);
+      previous = value;
+    }
+    addPage('Next →', page + 1, 'next');
+    if (updateUrl) history.replaceState(null, '', pageUrl(page));
+  }
+
+  function restoreFilters() {
+    const params = new URLSearchParams(location.search);
+    for (const select of [decadeSelect, industrySelect, tagSelect]) {
+      const raw = params.get(select.name) || '';
+      const value = select === tagSelect ? tagKey(raw) : raw;
+      select.value = [...select.options].some(option => option.value === value) ? value : '';
+    }
+    const requestedPage = params.get('page') || '1';
+    page = /^\d+$/.test(requestedPage) && Number.isSafeInteger(Number(requestedPage))
+      ? Math.max(1, Number(requestedPage)) : 1;
+    applyFilters(false);
+  }
+  form.hidden = false;
+  restoreFilters();
+  form.addEventListener('change', () => { page = 1; applyFilters(); });
+  form.addEventListener('submit', event => event.preventDefault());
+  form.addEventListener('reset', () => { page = 1; decadeSelect.value = ''; industrySelect.value = ''; tagSelect.value = ''; applyFilters(); });
+  document.querySelector('#clear-empty')!.addEventListener('click', () => { form.reset(); decadeSelect.focus(); });
+  pagination.addEventListener('click', event => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest<HTMLAnchorElement>('a[data-page]');
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    page = Number(link.dataset.page);
+    history.pushState(null, '', pageUrl(page));
+    applyFilters(false);
+    document.querySelector<HTMLElement>('#collection-heading')?.focus({ preventScroll: true });
+    document.querySelector('#collection')?.scrollIntoView({ block: 'start' });
+  });
+  window.addEventListener('popstate', restoreFilters);
+  window.addEventListener('pageshow', restoreFilters);
+</script>
